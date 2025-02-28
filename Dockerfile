@@ -17,7 +17,7 @@ WORKDIR /app
 
 # Add the source code to app
 COPY . /app
-COPY .env.deploy .
+COPY .env.local .
 
 # Install all the dependencies
 RUN npm install --frozen-lockfile
