@@ -14,9 +14,13 @@ export default NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        // Tìm người dùng theo email
+        if (!credentials || !credentials.email || !credentials.password) {
+          throw new Error("Email và mật khẩu là bắt buộc.");
+        }
+
+        // Find the user by email
         const user = await prisma.user.findUnique({
-          where: { email: credentials?.email },
+          where: { email: credentials.email },
           select: {
             id: true,
             name: true,
@@ -27,23 +31,30 @@ export default NextAuth({
           },
         });
 
-        if (user && credentials?.password) {
-          // Kiểm tra mật khẩu hợp lệ
-          const isValid = await compare(credentials.password, user.password);
-          if (isValid) {
-            // Kiểm tra nếu active_user bằng true
-            if (user.active_user) {
-              return { id: user.id, name: user.name, email: user.email, role: user.role };
-            } else {
-              throw new Error("Tài khoản của bạn không hoạt động.");
-            }
-          } else {
-            throw new Error("Mật khẩu không đúng.");
-          }
+        if (!user) {
+          throw new Error("Tài khoản không tồn tại.");
         }
 
-        throw new Error("Tài khoản không tồn tại.");
-      },
+        // Check if password is valid
+        const isValid = await compare(credentials.password, user.password);
+        if (!isValid) {
+          throw new Error("Mật khẩu không đúng.");
+        }
+
+        // Check if the account is active
+        if (!user.active_user) {
+          throw new Error("Tài khoản của bạn không hoạt động.");
+        }
+
+        // Return the complete user object, including active_user
+        return { 
+          id: user.id, 
+          name: user.name, 
+          email: user.email, 
+          role: user.role,
+          active_user: user.active_user,
+        };
+      }
     }),
   ],
   pages: {
